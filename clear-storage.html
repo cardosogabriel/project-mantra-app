@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Storage</title>
+</head>
+<body>
+    <h1>Clear App Storage</h1>
+    <button onclick="clearStorage()">Clear Storage & Reload</button>
+    <script>
+        function clearStorage() {
+            localStorage.clear();
+            sessionStorage.clear();
+            alert('Storage cleared! Reloading...');
+            window.location.href = 'http://localhost:19006';
+        }
+    </script>
+</body>
+</html>
