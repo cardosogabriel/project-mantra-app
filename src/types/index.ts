@@ -14,6 +14,7 @@ export interface UserProgress {
   startDate: string;
   lastActiveDate: string;
   hasCompletedOnboarding: boolean;
+  dayRemainingTime?: { [day: number]: number };
 }
 
 export interface DayCompletion {

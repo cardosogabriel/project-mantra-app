@@ -4,6 +4,7 @@ import { STORAGE_KEYS } from './constants';
 
 export const saveUserProgress = async (progress: UserProgress): Promise<void> => {
   try {
+    console.log('Storage: Saving user progress, reminderTime:', progress.reminderTime);
     await AsyncStorage.setItem(STORAGE_KEYS.USER_PROGRESS, JSON.stringify(progress));
   } catch (error) {
     console.error('Error saving user progress:', error);
@@ -13,7 +14,9 @@ export const saveUserProgress = async (progress: UserProgress): Promise<void> =>
 export const loadUserProgress = async (): Promise<UserProgress | null> => {
   try {
     const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROGRESS);
-    return data ? JSON.parse(data) : null;
+    const parsed = data ? JSON.parse(data) : null;
+    console.log('Storage: Loaded user progress, reminderTime:', parsed?.reminderTime);
+    return parsed;
   } catch (error) {
     console.error('Error loading user progress:', error);
     return null;

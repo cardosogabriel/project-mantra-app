@@ -1,9 +1,9 @@
 import { Mantra } from '../types';
 
 export const COLORS = {
-  primary: '#3D2B5C',
+  primary: '#2D1B4E',
   accent: '#00D9D9',
-  yellow: '#FFE100',
+  yellow: '#FFD700',
   red: '#FF5252',
   white: '#FFFFFF',
   gray: '#9E9E9E',

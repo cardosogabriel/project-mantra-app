@@ -6,6 +6,7 @@ import { COLORS, FONTS, FONT_WEIGHTS } from '../utils/constants';
 import { Button } from '../components/Button';
 import { useApp } from '../context/AppContext';
 import { requestNotificationPermissions, scheduleDailyReminder } from '../utils/notifications';
+import { commonStyles } from '../styles/commonStyles';
 
 export const OnboardingStep3: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -13,12 +14,15 @@ export const OnboardingStep3: React.FC = () => {
   const [selectedTime, setSelectedTime] = useState<string>('21:00');
 
   const handleSetReminder = async () => {
+    console.log('OnboardingStep3: Saving reminder time:', selectedTime);
     const granted = await requestNotificationPermissions();
     if (granted) {
       const [hours, minutes] = selectedTime.split(':').map(Number);
       await scheduleDailyReminder(hours, minutes);
-      await setReminderTime(selectedTime, true);
     }
+    // Save the reminder preference even on web (where notifications aren't supported)
+    await setReminderTime(selectedTime, true);
+    console.log('OnboardingStep3: Reminder time saved');
     navigation.navigate('Preparing');
   };
 
@@ -101,8 +105,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   content: {
-    padding: 16,
-    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
   header: {
     flexDirection: 'row',
@@ -153,33 +157,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   pickerContainer: {
-    backgroundColor: 'transparent',
-    borderRadius: 8,
-    height: 40,
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.66)',
-    overflow: 'hidden',
-    paddingHorizontal: 12,
-    // @ts-ignore - Web-only property
-    outline: 'none',
+    ...commonStyles.pickerContainer,
   },
   picker: {
-    color: COLORS.white,
-    fontSize: 16,
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-    height: 40,
-    // @ts-ignore - Web-only property
-    outline: 'none',
+    ...commonStyles.picker,
   },
   pickerItem: {
-    color: COLORS.white,
-    backgroundColor: 'rgba(62, 44, 82, 0.8)',
-    fontSize: 18,
-    fontFamily: FONTS.semiBold,
-    fontWeight: FONT_WEIGHTS.semiBold,
-    padding: 12,
+    ...commonStyles.pickerItem,
   },
   footer: {
     paddingTop: 20,

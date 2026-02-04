@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,13 @@ import {
   Switch,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { COLORS } from '../utils/constants';
+import { Picker } from '@react-native-picker/picker';
+import { COLORS, FONTS, FONT_WEIGHTS } from '../utils/constants';
 import { useApp } from '../context/AppContext';
 import { Button } from '../components/Button';
-import { TimePicker } from '../components/TimePicker';
-import { ConfirmationModal } from '../components/ConfirmationModal';
+import { BellIcon } from '../components/icons/BellIcon';
+import { RestartIcon } from '../components/icons/RestartIcon';
+import { commonStyles } from '../styles/commonStyles';
 import {
   scheduleDailyReminder,
   cancelAllNotifications,
@@ -22,17 +24,25 @@ import { clearUserProgress } from '../utils/storage';
 
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { userProgress, setReminderTime, resetProgress } = useApp();
+  const { userProgress, setReminderTime, resetProgress, isLoading } = useApp();
 
+  console.log('SettingsScreen: Initial userProgress.reminderTime:', userProgress.reminderTime);
   const [reminderEnabled, setReminderEnabled] = useState(userProgress.reminderEnabled);
-  const [reminderTime, setReminderTimeState] = useState(() => {
-    if (userProgress.reminderTime) {
-      const [hours, minutes] = userProgress.reminderTime.split(':').map(Number);
-      return new Date(2024, 0, 1, hours, minutes);
-    }
-    return new Date(2024, 0, 1, 21, 0);
+  const [selectedTime, setSelectedTime] = useState(userProgress.reminderTime || '21:00');
+  const [showRestartConfirm, setShowRestartConfirm] = useState(false);
+
+  // Sync local state with userProgress when it changes
+  useEffect(() => {
+    console.log('SettingsScreen: Syncing reminder time from userProgress:', userProgress.reminderTime);
+    setReminderEnabled(userProgress.reminderEnabled);
+    setSelectedTime(userProgress.reminderTime || '21:00');
+  }, [userProgress.reminderEnabled, userProgress.reminderTime]);
+
+  // Generate time options (00:00 to 23:00)
+  const times = Array.from({ length: 24 }, (_, i) => {
+    const hour = i.toString().padStart(2, '0');
+    return `${hour}:00`;
   });
-  const [showRestartModal, setShowRestartModal] = useState(false);
 
   const handleToggleReminder = async (enabled: boolean) => {
     setReminderEnabled(enabled);
@@ -40,114 +50,140 @@ export const SettingsScreen: React.FC = () => {
     if (enabled) {
       const granted = await requestNotificationPermissions();
       if (granted) {
-        const hours = reminderTime.getHours();
-        const minutes = reminderTime.getMinutes();
+        const [hours, minutes] = selectedTime.split(':').map(Number);
         await scheduleDailyReminder(hours, minutes);
-        const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-        await setReminderTime(timeString, true);
-      } else {
-        setReminderEnabled(false);
       }
+      // Save the reminder preference even on web (where notifications aren't supported)
+      await setReminderTime(selectedTime, true);
     } else {
       await cancelAllNotifications();
       await setReminderTime(null, false);
     }
   };
 
-  const handleTimeChange = async (newTime: Date) => {
-    setReminderTimeState(newTime);
-
+  const handleTimeChange = async (newTime: string) => {
+    setSelectedTime(newTime);
     if (reminderEnabled) {
-      const hours = newTime.getHours();
-      const minutes = newTime.getMinutes();
+      const [hours, minutes] = newTime.split(':').map(Number);
       await scheduleDailyReminder(hours, minutes);
-      const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-      await setReminderTime(timeString, true);
+      await setReminderTime(newTime, true);
     }
   };
 
   const handleRestartPractice = async () => {
-    await cancelAllNotifications();
-    await clearUserProgress();
-    await resetProgress();
-    setShowRestartModal(false);
-    navigation.replace('OnboardingStep1');
+    console.log('handleRestartPractice called');
+    try {
+      await cancelAllNotifications();
+      console.log('Notifications cancelled');
+      await clearUserProgress();
+      console.log('User progress cleared');
+      await resetProgress();
+      console.log('Progress reset');
+      setShowRestartConfirm(false);
+      console.log('Navigating to OnboardingStep1');
+      navigation.replace('OnboardingStep1');
+    } catch (error) {
+      console.error('Error during restart:', error);
+    }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonContainer}>
+          <Text style={styles.backButtonArrow}>←</Text>
+          <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Settings</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 80 }} />
       </View>
 
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Daily Reminder</Text>
-
-          <View style={styles.setting}>
-            <Text style={styles.settingLabel}>Enable Reminder</Text>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Main Settings Card */}
+        <View style={styles.mainCard}>
+          {/* Daily Reminder Section */}
+          <View style={styles.reminderHeader}>
+            <BellIcon size={32} color={COLORS.accent} />
+            <View style={styles.reminderHeaderText}>
+              <Text style={styles.reminderTitle}>Daily Reminder</Text>
+              <Text style={styles.reminderSubtitle}>Set for {selectedTime}</Text>
+            </View>
             <Switch
               value={reminderEnabled}
               onValueChange={handleToggleReminder}
-              trackColor={{ false: COLORS.darkGray, true: COLORS.accent }}
+              trackColor={{ false: 'rgba(255, 255, 255, 0.2)', true: COLORS.accent }}
               thumbColor={COLORS.white}
+              ios_backgroundColor="rgba(255, 255, 255, 0.2)"
             />
           </View>
 
           {reminderEnabled && (
-            <View style={styles.timePickerContainer}>
-              <Text style={styles.label}>Reminder Time</Text>
-              <TimePicker value={reminderTime} onChange={handleTimeChange} />
+            <View style={styles.timePickerSection}>
+              <Text style={styles.timePickerLabel}>Reminder time</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={selectedTime}
+                  onValueChange={(itemValue) => handleTimeChange(itemValue)}
+                  style={styles.picker}
+                  dropdownIconColor={COLORS.white}
+                  itemStyle={styles.pickerItem}
+                >
+                  {times.map((time) => (
+                    <Picker.Item
+                      key={time}
+                      label={time}
+                      value={time}
+                      color={COLORS.white}
+                    />
+                  ))}
+                </Picker>
+              </View>
             </View>
           )}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Practice Information</Text>
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Current Day:</Text>
-              <Text style={styles.infoValue}>Day {userProgress.currentDay}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Days Completed:</Text>
-              <Text style={styles.infoValue}>{userProgress.completedDays.length}/40</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Selected Mantra:</Text>
-              <Text style={styles.infoValue} numberOfLines={2}>
-                {userProgress.selectedMantra?.name}
+        {/* Restart Practice Card */}
+        <View style={styles.restartCard}>
+          <View style={styles.restartSection}>
+            <RestartIcon size={32} color="#FF6B6B" />
+            <View style={styles.restartContent}>
+              <Text style={styles.restartTitle}>Restart Practice</Text>
+              <Text style={styles.restartDescription}>
+                This will reset all your progress and start the 40-day journey from the beginning.
               </Text>
             </View>
           </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Danger Zone</Text>
-          <Button
-            title="Restart Practice"
-            onPress={() => setShowRestartModal(true)}
-            variant="danger"
-          />
-          <Text style={styles.warningText}>
-            This will clear all your progress and start from Day 1
-          </Text>
+          {!showRestartConfirm ? (
+            <Button
+              title="Restart Practice"
+              onPress={() => setShowRestartConfirm(true)}
+              variant="outlined"
+              size="md"
+              color="danger"
+              style={styles.restartButton}
+            />
+          ) : (
+            <View style={styles.confirmButtons}>
+              <Button
+                title="Cancel"
+                onPress={() => setShowRestartConfirm(false)}
+                variant="outlined"
+                size="md"
+                color="accent"
+                style={styles.confirmButton}
+              />
+              <Button
+                title="Yes, restart"
+                onPress={handleRestartPractice}
+                variant="outlined"
+                size="md"
+                color="danger"
+                style={styles.confirmButton}
+              />
+            </View>
+          )}
         </View>
       </ScrollView>
-
-      <ConfirmationModal
-        visible={showRestartModal}
-        title="Restart Practice?"
-        message="Are you sure you want to restart your practice? This will delete all your progress and cannot be undone."
-        confirmText="Yes, Restart"
-        cancelText="Cancel"
-        onConfirm={handleRestartPractice}
-        onCancel={() => setShowRestartModal(false)}
-      />
     </View>
   );
 };
@@ -161,80 +197,124 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 24,
-    paddingTop: 60,
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 24,
   },
-  backButton: {
-    color: COLORS.white,
-    fontSize: 32,
-    width: 40,
+  backButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 80,
+  },
+  backButtonArrow: {
+    color: COLORS.textSecondary,
+    fontSize: 24,
+    marginRight: 8,
+  },
+  backButtonText: {
+    color: COLORS.textSecondary,
+    fontSize: 18,
+    fontFamily: FONTS.medium,
+    fontWeight: FONT_WEIGHTS.medium,
   },
   title: {
     color: COLORS.white,
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: FONTS.medium,
+    fontWeight: FONT_WEIGHTS.medium,
+    textAlign: 'center',
   },
   content: {
-    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
+  },
+  mainCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
     padding: 24,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    color: COLORS.white,
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  setting: {
+  reminderHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
   },
-  settingLabel: {
+  reminderHeaderText: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  reminderTitle: {
     color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 18,
+    fontFamily: FONTS.semiBold,
+    fontWeight: FONT_WEIGHTS.semiBold,
+    marginBottom: 4,
   },
-  timePickerContainer: {
-    marginTop: 8,
-  },
-  label: {
-    color: COLORS.gray,
+  reminderSubtitle: {
+    color: COLORS.textSecondary,
     fontSize: 14,
+    fontFamily: FONTS.regular,
+  },
+  timePickerSection: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    padding: 20,
+    marginTop: 16,
+  },
+  timePickerLabel: {
+    color: COLORS.accent,
+    fontSize: 18,
+    fontFamily: FONTS.medium,
+    fontWeight: FONT_WEIGHTS.medium,
+    marginBottom: 12,
+  },
+  pickerContainer: {
+    ...commonStyles.pickerContainer,
+  },
+  picker: {
+    ...commonStyles.picker,
+  },
+  pickerItem: {
+    ...commonStyles.pickerItem,
+  },
+  restartCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  restartSection: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  restartContent: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  restartTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontFamily: FONTS.semiBold,
+    fontWeight: FONT_WEIGHTS.semiBold,
     marginBottom: 8,
   },
-  infoCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 20,
+  restartDescription: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontFamily: FONTS.regular,
+    lineHeight: 20,
   },
-  infoRow: {
+  restartButton: {
+    width: '100%',
+  },
+  confirmButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 8,
+    gap: 12,
   },
-  infoLabel: {
-    color: COLORS.gray,
-    fontSize: 14,
-  },
-  infoValue: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '600',
+  confirmButton: {
     flex: 1,
-    textAlign: 'right',
-  },
-  warningText: {
-    color: COLORS.red,
-    fontSize: 12,
-    marginTop: 8,
-    textAlign: 'center',
   },
 });

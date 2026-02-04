@@ -5,9 +5,9 @@ import { COLORS, FONTS, FONT_WEIGHTS } from '../utils/constants';
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'solid';
+  variant?: 'outlined' | 'solid';
   size?: 'md' | 'lg';
-  color?: 'accent' | 'yellow' | 'red';
+  color?: 'accent' | 'yellow' | 'danger';
   disabled?: boolean;
   style?: ViewStyle;
 }
@@ -15,7 +15,7 @@ interface ButtonProps {
 export const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
-  variant = 'primary',
+  variant = 'outlined',
   size = 'md',
   color = 'accent',
   disabled = false,
@@ -24,12 +24,14 @@ export const Button: React.FC<ButtonProps> = ({
   const getButtonStyle = () => {
     if (variant === 'solid') {
       if (color === 'yellow') return styles.yellowButton;
-      if (color === 'red') return styles.dangerButton;
-      return styles.primaryButton;
+      if (color === 'danger') return styles.dangerButton;
+      return styles.outlinedButton;
     }
-    if (variant === 'secondary') return styles.secondaryButton;
-    if (variant === 'danger') return styles.dangerButton;
-    return styles.primaryButton;
+    if (variant === 'outlined') {
+      if (color === 'danger') return styles.outlinedDangerButton;
+      return styles.outlinedButton;
+    }
+    return styles.outlinedButton;
   };
 
   const getTextStyle = () => {
@@ -41,8 +43,12 @@ export const Button: React.FC<ButtonProps> = ({
 
     if (variant === 'solid' && color === 'yellow') {
       textStyles.push(styles.yellowText);
-    } else if (variant === 'secondary') {
-      textStyles.push(styles.secondaryText);
+    } else if (variant === 'solid' && color === 'danger') {
+      textStyles.push(styles.dangerText);
+    } else if (variant === 'outlined' && color === 'danger') {
+      textStyles.push(styles.outlinedDangerText);
+    } else if (variant === 'outlined') {
+      textStyles.push(styles.outlinedText);
     }
 
     return textStyles;
@@ -52,6 +58,7 @@ export const Button: React.FC<ButtonProps> = ({
     <TouchableOpacity
       style={[
         styles.button,
+        size === 'md' && styles.buttonMd,
         size === 'lg' && styles.buttonLg,
         getButtonStyle(),
         disabled && styles.disabled,
@@ -79,15 +86,21 @@ const styles = StyleSheet.create({
   },
   buttonLg: {
     height: 48,
-    paddingHorizontal: 40,
+    paddingHorizontal: 24,
   },
-  primaryButton: {
-    backgroundColor: COLORS.accent,
+  buttonMd: {
+    height: 36,
+    paddingHorizontal: 24,
   },
-  secondaryButton: {
+  outlinedButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: COLORS.accent,
+  },
+  outlinedDangerButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#FF6467',
   },
   dangerButton: {
     backgroundColor: COLORS.red,
@@ -109,10 +122,16 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.semiBold,
     fontWeight: FONT_WEIGHTS.semiBold,
   },
-  secondaryText: {
+  outlinedText: {
     color: COLORS.accent,
+  },
+  outlinedDangerText: {
+    color: '#FF6467',
   },
   yellowText: {
     color: '#2D1B4E',
+  },
+  dangerText: {
+    color: COLORS.white,
   },
 });

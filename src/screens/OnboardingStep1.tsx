@@ -5,6 +5,7 @@ import { Picker } from '@react-native-picker/picker';
 import { COLORS, FONTS, FONT_WEIGHTS } from '../utils/constants';
 import { Button } from '../components/Button';
 import { useApp } from '../context/AppContext';
+import { commonStyles } from '../styles/commonStyles';
 
 export const OnboardingStep1: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -93,7 +94,7 @@ export const OnboardingStep1: React.FC = () => {
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={selectedDay}
-                onValueChange={(itemValue) => setSelectedDay(itemValue)}
+                onValueChange={(itemValue) => setSelectedDay(Number(itemValue))}
                 style={styles.picker}
                 dropdownIconColor={COLORS.white}
                 itemStyle={styles.pickerItem}
@@ -134,8 +135,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   content: {
-    padding: 16,
-    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
   logoContainer: {
     alignItems: 'center',
@@ -231,33 +232,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   pickerContainer: {
-    backgroundColor: 'transparent',
-    borderRadius: 8,
-    height: 40,
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.66)',
-    overflow: 'hidden',
-    paddingHorizontal: 12,
-    // @ts-ignore - Web-only property
-    outline: 'none',
+    ...commonStyles.pickerContainer,
   },
   picker: {
-    color: COLORS.white,
-    fontSize: 16,
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-    height: 40,
-    // @ts-ignore - Web-only property
-    outline: 'none',
+    ...commonStyles.picker,
   },
   pickerItem: {
-    color: COLORS.white,
-    backgroundColor: 'rgba(62, 44, 82, 0.8)',
-    fontSize: 18,
-    fontFamily: FONTS.semiBold,
-    fontWeight: FONT_WEIGHTS.semiBold,
-    padding: 12,
+    ...commonStyles.pickerItem,
   },
   footer: {
     paddingTop: 20,
